@@ -1,7 +1,7 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
 
-let crime_url = ref('');
+let crime_url = ref('http://localhost:8000');
 let dialog_err = ref(false);
 let map = reactive(
     {
@@ -70,8 +70,13 @@ onMounted(() => {
 // FUNCTIONS
 // Function called once user has entered REST API URL
 function initializeCrimes() {
-    // TODO: get code and neighborhood data
-    //       get initial 1000 crimes
+    fetch(crime_url.value + "/incidents").then((response) => {
+        return response.json();
+    }).then((result) => {
+        console.log(result);
+    }).catch((error) => {
+        console.log('Error:', error);
+    });
 }
 
 // Function called when user presses 'OK' on dialog box
