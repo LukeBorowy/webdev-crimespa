@@ -34,12 +34,14 @@ let map = reactive(
             { location: [44.913106, -93.170779], marker: null },
             { location: [44.937705, -93.136997], marker: null },
             { location: [44.949203, -93.093739], marker: null }
-        ]
+        ],
+        isUserGesturing: false
     }
 );
 const locationText = reactive({
     value: "",
-    isSearching: false
+    isSearching: false,
+    cancelSearch: null
 });
 
 // Vue callback for once <template> HTML has been added to web page
@@ -70,8 +72,21 @@ onMounted(() => {
         });
 
     // Configure location text box
-    map.leaflet.addEventListener("moveend", updateLocTextWithMap);
-    map.leaflet.addEventListener("zoomend", updateLocTextWithMap);
+    // Weird undocumented behavior: user-initiated movestart events have their target set to the Leaflet map,
+    // while programmatic pans/zooms do not
+    map.leaflet.addEventListener("movestart", (ev) => {
+        if (ev.target !== map.leaflet) map.isUserGesturing = true;
+    });
+    map.leaflet.addEventListener("moveend", (ev) => {
+        if (map.isUserGesturing) {
+            if (locationText.cancelSearch) {
+                locationText.cancelSearch(true);
+                locationText.cancelSearch = null;
+            }
+            updateLocTextWithMap();
+        }
+        map.isUserGesturing = false;
+    })
 });
 
 
@@ -123,27 +138,29 @@ async function updateMapWithLocText() {
             await updateLocTextWithMap();
         } else {
             locationText.value = json[0].display_name;
+            locationText.isSearching = false;
         }
     } catch (err) {
         console.error(err);
         await updateLocTextWithMap();
     }
-    locationText.isSearching = false;
 }
 
 // Location text box update on map pan/zoom
 async function updateLocTextWithMap() {
-    try {
-        locationText.isSearching = true;
-        const lat = map.leaflet.getCenter().lat;
-        const lng = map.leaflet.getCenter().lng;
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+    locationText.isSearching = true;
+    const lat = map.leaflet.getCenter().lat;
+    const lng = map.leaflet.getCenter().lng;
+    await new Promise(async (resolve, reject) => {
+        locationText.cancelSearch = reject;
+        resolve(await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`));
+    }).then(async (res) => {
         const json = await res.json();
         locationText.value = json.display_name;
-    } catch (err) {
-        console.error(err);
-    }
-    locationText.isSearching = false;
+        locationText.isSearching = false;
+    }, (reason) => {
+        if (!reason) throw reason;
+    }).catch(console.error);
 }
 
 /**
