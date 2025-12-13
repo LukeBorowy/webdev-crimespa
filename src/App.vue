@@ -55,7 +55,8 @@ let map = reactive(
             { location: [44.913106, -93.170779], marker: null },
             { location: [44.937705, -93.136997], marker: null },
             { location: [44.949203, -93.093739], marker: null }
-        ]
+        ],
+        isUserGesturing: false
     }
 );
 // key = map's name = database name
@@ -80,7 +81,20 @@ const neighborhood_mapping = {
 }
 const locationText = reactive({
     value: "",
-    isSearching: false
+    isSearching: false,
+    cancelSearch: null
+});
+const newIncForm = reactive({
+    case_number: "",
+    date: "",
+    time: "",
+    code: undefined,
+    incident: "",
+    police_grid: undefined,
+    neighborhood_number: undefined,
+    block: "",
+    isSending: false,
+    errorMsg: ""
 });
 let neighborhoodBB = {};
 // Vue callback for once <template> HTML has been added to web page
@@ -119,11 +133,21 @@ onMounted(() => {
         });
 
     // Configure location text box
-    map.leaflet.addEventListener("moveend", updateLocTextWithMap);
-    //map.leaflet.addEventListener("zoomend", updateLocTextWithMap);
-
-    map.leaflet.addEventListener("moveend", updateCrimes);
-    //map.leaflet.addEventListener("zoomend", updateCrimes);
+    // Weird undocumented behavior: programmatic movestart events have their target set to the Leaflet map,
+    // while user-initiated pans/zooms do not
+    map.leaflet.addEventListener("movestart", (ev) => {
+        if (ev.target !== map.leaflet) map.isUserGesturing = true;
+    });
+    map.leaflet.addEventListener("moveend", (ev) => {
+        if (map.isUserGesturing) {
+            if (locationText.cancelSearch) {
+                locationText.cancelSearch(true);
+                locationText.cancelSearch = null;
+            }
+            updateLocTextWithMap();
+        }
+        map.isUserGesturing = false;
+    })
 });
 
 
@@ -301,27 +325,60 @@ async function updateMapWithLocText() {
             await updateLocTextWithMap();
         } else {
             locationText.value = json[0].display_name;
+            locationText.isSearching = false;
         }
     } catch (err) {
         console.error(err);
         await updateLocTextWithMap();
     }
-    locationText.isSearching = false;
 }
 
 // Location text box update on map pan/zoom
 async function updateLocTextWithMap() {
-    try {
-        locationText.isSearching = true;
-        const lat = map.leaflet.getCenter().lat;
-        const lng = map.leaflet.getCenter().lng;
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+    locationText.isSearching = true;
+    const lat = map.leaflet.getCenter().lat;
+    const lng = map.leaflet.getCenter().lng;
+    await new Promise(async (resolve, reject) => {
+        locationText.cancelSearch = reject;
+        resolve(await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`));
+    }).then(async (res) => {
         const json = await res.json();
         locationText.value = json.display_name;
-    } catch (err) {
+        locationText.isSearching = false;
+    }, (reason) => {
+        if (!reason) throw reason;
+    }).catch(console.error);
+}
+
+// New incident form submit
+function submitNewIncForm(ev) {
+    ev.preventDefault();
+    newIncForm.isSending = true;
+    fetch(`${crime_url.value}/new-incident`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(newIncForm)
+    }).then((res) => {
+        if (!res.ok) {
+            newIncForm.errorMsg = "Invalid input. Please try again.";
+        } else {
+            // Reset fields
+            newIncForm.errorMsg = "";
+            newIncForm.block = "";
+            newIncForm.case_number = "";
+            newIncForm.code = undefined;
+            newIncForm.date = "";
+            newIncForm.incident = "";
+            newIncForm.neighborhood_number = undefined;
+            newIncForm.police_grid = undefined;
+            newIncForm.time = "";
+        }
+    }).catch(err => {
+        newIncForm.errorMsg = "Something went wrong. Please try again.";
         console.error(err);
-    }
-    locationText.isSearching = false;
+    }).finally(() => newIncForm.isSending = false)
 }
 
 function deleteCrime(case_number) {
@@ -348,6 +405,7 @@ function deleteCrime(case_number) {
 window.globalDeleteCrime = function(case_number) {
     deleteCrime(case_number);
 }
+
 
 /**
  * @param {number} value
@@ -391,6 +449,47 @@ function almostEqual(value1, value2) {
             <button class="button" type="button" :disabled="locationText.isSearching" @click="updateMapWithLocText">Go</button>
         </div>
         <div id="leafletmap"></div>
+        <h2>Create New Incident</h2>
+        <form @submit="submitNewIncForm">
+            <div class="new-incident-form">
+                <div class="form-element">
+                    <label for="new-inc-case-num">Case #</label>
+                    <input type="text" id="case-num" required :disabled="newIncForm.isSending" v-model="newIncForm.case_number" />
+                </div>
+                <div class="form-element short">
+                    <label for="new-inc-date">Date</label>
+                    <input type="text" id="new-inc-date" required :disabled="newIncForm.isSending" v-model="newIncForm.date" />
+                </div>
+                <div class="form-element short">
+                    <label for="new-inc-time">Time</label>
+                    <input type="text" id="new-inc-time" required :disabled="newIncForm.isSending" v-model="newIncForm.time" />
+                </div>
+                <div class="form-element short">
+                    <label for="new-inc-code">Code</label>
+                    <input type="text" id="new-inc-code" required :disabled="newIncForm.isSending" v-model="newIncForm.code" />
+                </div>
+                <div class="form-element short">
+                    <label for="new-inc-grid">Police Grid #</label>
+                    <input type="text" id="new-inc-grid" required :disabled="newIncForm.isSending" v-model="newIncForm.police_grid" />
+                </div>
+                <div class="form-element short">
+                    <label for="new-inc-neighborhood">Neighborhood #</label>
+                    <input type="text" id="new-inc-neighborhood" required :disabled="newIncForm.isSending" v-model="newIncForm.neighborhood_number" />
+                </div>
+                <div class="form-element">
+                    <label for="new-inc-block">Block</label>
+                    <input type="text" id="new-inc-block" required :disabled="newIncForm.isSending" v-model="newIncForm.block" />
+                </div>
+                <div class="form-element">
+                    <label for="new-inc-desc">Incident</label>
+                    <textarea id="new-inc-desc" required :disabled="newIncForm.isSending" v-model="newIncForm.incident"></textarea>
+                </div>
+            </div>
+            <div class="form-element">
+                <button class="button" type="submit" :disabled="newIncForm.isSending">Submit</button>
+                <span class="dialog-error" v-text="newIncForm.errorMsg"></span>
+            </div>
+        </form>
         <div id="crimes-list">
             <h2>Crimes List</h2>
             <span>Click on a row to jump to its location on the map. It may take a while to go there due to the location API call.</span>
@@ -460,6 +559,9 @@ function almostEqual(value1, value2) {
             </table>
         </div>
     </div>
+    <footer>
+        <a href="/about.html">About the project</a>
+    </footer>
 </template>
 
 <style scoped>
@@ -505,11 +607,48 @@ function almostEqual(value1, value2) {
     align-items: center;
 }
 
+.new-incident-form {
+    display: flex;
+    flex-flow: row wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-element {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.form-element > input {
+    width: 10rem;
+}
+
+.form-element.short > input {
+    width: 5rem;
+}
+
+.form-element > label {
+    flex: 1 0 auto;
+}
+
+footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+}
+
 label {
     line-height: 1;
 }
 
-input {
+input,
+textarea {
+    margin: 0;
+}
+
+span {
     margin: 0;
 }
 
