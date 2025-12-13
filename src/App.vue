@@ -494,74 +494,76 @@ function almostEqual(value1, value2) {
                 <span class="dialog-error" v-text="newIncForm.errorMsg"></span>
             </div>
         </form>
-        <div id="crimes-list">
-            <h2>Crimes List</h2>
-            <span>Click on a row to jump to its location on the map. It may take a while to go there due to the location API call.</span>
-            <br>
+
+        <h2>Crimes List</h2>
+        <span>Click on a row to jump to its location on the map. It may take a while to go there due to the location API call.</span>
+        <br>
+        <div>
+            <h3>Filters</h3>
+            <div class="grid-x grid-padding-x grid-padding-y">
+                <div class="cell small-12 medium-6 large-3">
+                    <h5>Incident Types</h5>
+                    <div v-for="possible_incident in possible_incidents">
+                        <input type="checkbox" :id="possible_incident.name" :value="possible_incident.name" v-model="incident_checkboxes">
+                        <label :for="possible_incident.name">{{ possible_incident.name }}</label>
+                    </div>
+                </div>
+                <div class="cell small-12 medium-6 large-3">
+                    <h5>Neighborhoods </h5>
+                    (if none selected, will use what is visible on map)
+                    <div v-for="neighborhood in neighborhoods">
+                        <input type="checkbox" :id="neighborhood.name" :value="neighborhood.id" v-model="neighborhood_checkboxes">
+                        <label :for="neighborhood.name">{{ neighborhood.name }}</label>
+                    </div>
+                </div>
+                <div class="cell small-12 medium-6 large-3">
+                    <h5>Date Range</h5>
+                    <label for="start-date">Start Date:</label>
+                    <input type="date" id="start-date" v-model="start_date" />
+                    <br />
+                    <label for="end-date">End Date:</label>
+                    <input type="date" id="end-date" v-model="end_date" />
+                </div>
+                <div class="cell small-12 medium-6 large-3">
+                    <h5>Max incidents</h5>
+                    <input type="number" v-model="max_incidents" min="1" />
+                </div>
+            </div>
+            <button @click="updateCrimes" class="search-button">Search Crimes</button>
+        </div>
+        <div class="crime-legend-ctn">
+            <span class="legend"><b>Legend</b></span>
             <span class="violent legend">Violent</span>
             <span class="property legend">Property</span>
             <span class="other legend">Other</span>
-            <div>
-                <h3>Filters</h3>
-                <div class="grid-x">
-                    <div class="cell small-3">
-                        <h5>Incident Types</h5>
-                        <div v-for="possible_incident in possible_incidents">
-                            <input type="checkbox" :id="possible_incident.name" :value="possible_incident.name" v-model="incident_checkboxes">
-                            <label :for="possible_incident.name">{{ possible_incident.name }}</label>
-                        </div>
-                    </div>
-                    <div class="cell small-3">
-                        <h5>Neighborhoods </h5>
-                        (if none selected, will use what is visible on map)
-                        <div v-for="neighborhood in neighborhoods">
-                            <input type="checkbox" :id="neighborhood.name" :value="neighborhood.id" v-model="neighborhood_checkboxes">
-                            <label :for="neighborhood.name">{{ neighborhood.name }}</label>
-                        </div>
-                    </div>
-                    <div class="cell small-3">
-                        <h5>Date Range</h5>
-                        <label for="start-date">Start Date:</label>
-                        <input type="date" id="start-date" v-model="start_date" />
-                        <br />
-                        <label for="end-date">End Date:</label>
-                        <input type="date" id="end-date" v-model="end_date" />
-                    </div>
-                    <div class="cell small-3">
-                        <h5>Max incidents</h5>
-                        <input type="number" v-model="max_incidents" min="1" />
-                    </div>
-                </div>
-                <button @click="updateCrimes" class="search-button">Search Crimes</button>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Case Number</th>
-                        <th>Date</th>
-                        <th>Time</th>
-                        <th>Incident</th>
-                        <th>Police Grid</th>
-                        <th>Neighborhood</th>
-                        <th>Incident Type</th>
-                        <th>Block</th>
-                    </tr>
-                </thead>
-                <tbody :class="{ 'crime-loading': crime_loading }">
-                    <tr class="crime-row" :class="{ violent: crime.is_violent, property: crime.is_property, other: crime.is_other }" v-for="crime in crimes_list" :key="crime.case_number" @click="showMarker(crime)">
-                        <td>{{ crime.case_number }}</td>
-                        <td>{{ crime.date }}</td>
-                        <td>{{ crime.time }}</td>
-                        <td>{{ crime.incident }}</td>
-                        <td>{{ crime.police_grid }}</td>
-                        <td>{{ crime.neighborhood_name }}</td>
-                        <td>{{ crime.incident_type }}</td>
-                        <td>{{ crime.block }}</td>
-                        <td><button @click="deleteCrime(crime.case_number)">Delete</button></td>
-                    </tr>
-                </tbody>
-            </table>
         </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Case Number</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Incident</th>
+                    <th>Police Grid</th>
+                    <th>Neighborhood</th>
+                    <th>Incident Type</th>
+                    <th>Block</th>
+                </tr>
+            </thead>
+            <tbody :class="{ 'crime-loading': crime_loading }">
+                <tr class="crime-row" :class="{ violent: crime.is_violent, property: crime.is_property, other: crime.is_other }" v-for="crime in crimes_list" :key="crime.case_number" @click="showMarker(crime)">
+                    <td>{{ crime.case_number }}</td>
+                    <td>{{ crime.date }}</td>
+                    <td>{{ crime.time }}</td>
+                    <td>{{ crime.incident }}</td>
+                    <td>{{ crime.police_grid }}</td>
+                    <td>{{ crime.neighborhood_name }}</td>
+                    <td>{{ crime.incident_type }}</td>
+                    <td>{{ crime.block }}</td>
+                    <td><button @click="deleteCrime(crime.case_number)">Delete</button></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </template>
 
