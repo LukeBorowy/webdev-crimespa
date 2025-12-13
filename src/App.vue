@@ -290,6 +290,9 @@ function almostEqual(value1, value2) {
             </div>
         </form>
     </div>
+    <footer>
+        <a href="/about.html">About the project</a>
+    </footer>
 </template>
 
 <style scoped>
@@ -358,6 +361,13 @@ function almostEqual(value1, value2) {
 
 .form-element > label {
     flex: 1 0 auto;
+}
+
+footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
 }
 
 label {
