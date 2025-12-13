@@ -239,7 +239,8 @@ async function updateCrimes() {
 
 }
 let specificMarker = null;
-async function showMarker(crime) {
+async function showMarker(ev, crime) {
+    if (ev.target.classList.contains("delete-crime")) return;
     if (specificMarker !== null) {
         map.leaflet.removeLayer(specificMarker);
         specificMarker = null;
@@ -554,7 +555,7 @@ function almostEqual(value1, value2) {
                 </tr>
             </thead>
             <tbody :class="{ 'crime-loading': crime_loading }">
-                <tr class="crime-row" :class="{ violent: crime.is_violent, property: crime.is_property, other: crime.is_other }" v-for="crime in crimes_list" :key="crime.case_number" @click="showMarker(crime)">
+                <tr class="crime-row" :class="{ violent: crime.is_violent, property: crime.is_property, other: crime.is_other }" v-for="crime in crimes_list" :key="crime.case_number" @click="showMarker($event, crime)">
                     <td>{{ crime.case_number }}</td>
                     <td>{{ crime.date }}</td>
                     <td>{{ crime.time }}</td>
@@ -563,7 +564,7 @@ function almostEqual(value1, value2) {
                     <td>{{ crime.neighborhood_name }}</td>
                     <td>{{ crime.incident_type }}</td>
                     <td>{{ crime.block }}</td>
-                    <td><button @click="deleteCrime(crime.case_number)">Delete</button></td>
+                    <td><button class="delete-crime" @click="deleteCrime(crime.case_number)">Delete</button></td>
                 </tr>
             </tbody>
         </table>
