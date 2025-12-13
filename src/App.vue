@@ -443,6 +443,10 @@ function almostEqual(value1, value2) {
         <button class="button" type="button" @click="closeDialog">OK</button>
     </dialog>
     <div class="main-content">
+        <header>
+            <h1>St. Paul Crime Map</h1>
+            <a href="/about.html" target="_blank">About the project</a>
+        </header>
         <div class="location-ctn">
             <label for="location-text">Location</label>
             <input type="text" id="location-text" :disabled="locationText.isSearching" v-model="locationText.value" @keydown="doLocTextKeybinds" />
@@ -559,9 +563,6 @@ function almostEqual(value1, value2) {
             </table>
         </div>
     </div>
-    <footer>
-        <a href="/about.html">About the project</a>
-    </footer>
 </template>
 
 <style scoped>
@@ -601,6 +602,16 @@ function almostEqual(value1, value2) {
     color: #D32323;
 }
 
+header {
+    display: flex;
+    align-items: center;
+    margin: 0;
+}
+
+header > h1 {
+    margin-right: auto;
+}
+
 .location-ctn {
     display: flex;
     gap: 1rem;
@@ -632,17 +643,12 @@ function almostEqual(value1, value2) {
     flex: 1 0 auto;
 }
 
-footer {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 1rem;
-}
-
 label {
     line-height: 1;
 }
 
+h1,
+a,
 input,
 textarea {
     margin: 0;
