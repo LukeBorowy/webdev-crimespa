@@ -43,6 +43,18 @@ const locationText = reactive({
     isSearching: false,
     cancelSearch: null
 });
+const newIncForm = reactive({
+    case_number: "",
+    date: "",
+    time: "",
+    code: undefined,
+    incident: "",
+    police_grid: undefined,
+    neighborhood_number: undefined,
+    block: "",
+    isSending: false,
+    errorMsg: ""
+});
 
 // Vue callback for once <template> HTML has been added to web page
 onMounted(() => {
@@ -163,6 +175,37 @@ async function updateLocTextWithMap() {
     }).catch(console.error);
 }
 
+// New incident form submit
+function submitNewIncForm(ev) {
+    ev.preventDefault();
+    newIncForm.isSending = true;
+    fetch(`${crime_url.value}/new-incident`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(newIncForm)
+    }).then((res) => {
+        if (!res.ok) {
+            newIncForm.errorMsg = "Invalid input. Please try again.";
+        } else {
+            // Reset fields
+            newIncForm.errorMsg = "";
+            newIncForm.block = "";
+            newIncForm.case_number = "";
+            newIncForm.code = undefined;
+            newIncForm.date = "";
+            newIncForm.incident = "";
+            newIncForm.neighborhood_number = undefined;
+            newIncForm.police_grid = undefined;
+            newIncForm.time = "";
+        }
+    }).catch(err => {
+        newIncForm.errorMsg = "Something went wrong. Please try again.";
+        console.error(err);
+    }).finally(() => newIncForm.isSending = false)
+}
+
 /**
  * @param {number} value
  * @param {number} range1
@@ -205,6 +248,47 @@ function almostEqual(value1, value2) {
             <button class="button" type="button" :disabled="locationText.isSearching" @click="updateMapWithLocText">Go</button>
         </div>
         <div id="leafletmap"></div>
+        <h2>Create New Incident</h2>
+        <form @submit="submitNewIncForm">
+            <div class="new-incident-form">
+                <div class="form-element">
+                    <label for="new-inc-case-num">Case #</label>
+                    <input type="text" id="case-num" required :disabled="newIncForm.isSending" v-model="newIncForm.case_number" />
+                </div>
+                <div class="form-element short">
+                    <label for="new-inc-date">Date</label>
+                    <input type="text" id="new-inc-date" required :disabled="newIncForm.isSending" v-model="newIncForm.date" />
+                </div>
+                <div class="form-element short">
+                    <label for="new-inc-time">Time</label>
+                    <input type="text" id="new-inc-time" required :disabled="newIncForm.isSending" v-model="newIncForm.time" />
+                </div>
+                <div class="form-element short">
+                    <label for="new-inc-code">Code</label>
+                    <input type="text" id="new-inc-code" required :disabled="newIncForm.isSending" v-model="newIncForm.code" />
+                </div>
+                <div class="form-element short">
+                    <label for="new-inc-grid">Police Grid #</label>
+                    <input type="text" id="new-inc-grid" required :disabled="newIncForm.isSending" v-model="newIncForm.police_grid" />
+                </div>
+                <div class="form-element short">
+                    <label for="new-inc-neighborhood">Neighborhood #</label>
+                    <input type="text" id="new-inc-neighborhood" required :disabled="newIncForm.isSending" v-model="newIncForm.neighborhood_number" />
+                </div>
+                <div class="form-element">
+                    <label for="new-inc-block">Block</label>
+                    <input type="text" id="new-inc-block" required :disabled="newIncForm.isSending" v-model="newIncForm.block" />
+                </div>
+                <div class="form-element">
+                    <label for="new-inc-desc">Incident</label>
+                    <textarea id="new-inc-desc" required :disabled="newIncForm.isSending" v-model="newIncForm.incident"></textarea>
+                </div>
+            </div>
+            <div class="form-element">
+                <button class="button" type="submit" :disabled="newIncForm.isSending">Submit</button>
+                <span class="dialog-error" v-text="newIncForm.errorMsg"></span>
+            </div>
+        </form>
     </div>
 </template>
 
@@ -251,11 +335,41 @@ function almostEqual(value1, value2) {
     align-items: center;
 }
 
+.new-incident-form {
+    display: flex;
+    flex-flow: row wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-element {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.form-element > input {
+    width: 10rem;
+}
+
+.form-element.short > input {
+    width: 5rem;
+}
+
+.form-element > label {
+    flex: 1 0 auto;
+}
+
 label {
     line-height: 1;
 }
 
-input {
+input,
+textarea {
+    margin: 0;
+}
+
+span {
     margin: 0;
 }
 
