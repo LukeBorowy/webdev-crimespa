@@ -72,8 +72,8 @@ onMounted(() => {
         });
 
     // Configure location text box
-    // Weird undocumented behavior: user-initiated movestart events have their target set to the Leaflet map,
-    // while programmatic pans/zooms do not
+    // Weird undocumented behavior: programmatic movestart events have their target set to the Leaflet map,
+    // while user-initiated pans/zooms do not
     map.leaflet.addEventListener("movestart", (ev) => {
         if (ev.target !== map.leaflet) map.isUserGesturing = true;
     });
