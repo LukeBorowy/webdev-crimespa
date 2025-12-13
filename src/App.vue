@@ -460,13 +460,13 @@ function almostEqual(value1, value2) {
                     <label for="new-inc-case-num">Case #</label>
                     <input type="text" id="case-num" required :disabled="newIncForm.isSending" v-model="newIncForm.case_number" />
                 </div>
-                <div class="form-element short">
+                <div class="form-element">
                     <label for="new-inc-date">Date</label>
-                    <input type="text" id="new-inc-date" required :disabled="newIncForm.isSending" v-model="newIncForm.date" />
+                    <input type="date" id="new-inc-date" required :disabled="newIncForm.isSending" v-model="newIncForm.date" />
                 </div>
-                <div class="form-element short">
+                <div class="form-element">
                     <label for="new-inc-time">Time</label>
-                    <input type="text" id="new-inc-time" required :disabled="newIncForm.isSending" v-model="newIncForm.time" />
+                    <input type="time" id="new-inc-time" step="1" required :disabled="newIncForm.isSending" v-model="newIncForm.time" />
                 </div>
                 <div class="form-element short">
                     <label for="new-inc-code">Code</label>
