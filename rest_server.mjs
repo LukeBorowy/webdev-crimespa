@@ -170,7 +170,7 @@ app.get("/incidents", (req, res) => {
     console.log(req.query);
     let whereParts = [];
     let params = [];
-    let query = "SELECT * FROM Incidents";
+    let query = "SELECT * FROM Incidents JOIN Codes ON Incidents.code = Codes.code JOIN neighborhoods ON Incidents.neighborhood_number = Neighborhoods.neighborhood_number";
     let limit = 1000;
     if ("start_date" in req.query) {
         whereParts.push("DATE(date_time) >= DATE(?)");
@@ -185,7 +185,7 @@ app.get("/incidents", (req, res) => {
             .split(",")
             .map((c) => parseInt(c))
             .join(", ");
-        whereParts.push(`code in (${safe_codes})`);
+        whereParts.push(`Incidents.code in (${safe_codes})`);
     }
     if ("grid" in req.query) {
         let safe_grid = req.query["grid"]
@@ -199,7 +199,7 @@ app.get("/incidents", (req, res) => {
             .split(",")
             .map((n) => parseInt(n))
             .join(", ");
-        whereParts.push(`neighborhood_number in (${safe_neighborhood})`);
+        whereParts.push(`Incidents.neighborhood_number in (${safe_neighborhood})`);
     }
     if ("limit" in req.query) {
         limit = req.query["limit"];
@@ -207,10 +207,10 @@ app.get("/incidents", (req, res) => {
     if (whereParts.length > 0) {
         query += " WHERE " + whereParts.join(" AND ");
     }
-    query += " ORDER BY date_time";
+    query += " ORDER BY date_time DESC";
     query += " LIMIT ?";
     params.push(limit);
-    console.log(query, params);
+    console.log(query, params)
     dbSelect(query, params)
         .then((rows) => {
             let response = [];
@@ -223,6 +223,8 @@ app.get("/incidents", (req, res) => {
                     incident: row["incident"],
                     police_grid: row["police_grid"],
                     neighborhood_number: row["neighborhood_number"],
+                    neighborhood_name: row["neighborhood_name"],
+                    incident_type: row["incident_type"],
                     block: row["block"]
                 });
             }

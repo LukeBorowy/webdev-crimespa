@@ -1,8 +1,10 @@
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, onMounted, toRaw } from 'vue'
 
 let crime_url = ref('http://localhost:8000');
 let dialog_err = ref(false);
+let crime_loading = ref(false);
+let crimes_list = ref([]);
 let map = reactive(
     {
         leaflet: null,
@@ -37,11 +39,31 @@ let map = reactive(
         ]
     }
 );
+// key = map's name = database name
+const neighborhood_mapping = {
+    "St Anthony Park": "St. Anthony",
+    "Como": "Como",
+    "North End": "North End",
+    "Hamline-Midway": "Hamline/Midway",
+    "Macalester-Groveland": "Macalester-Groveland",
+    "Highland": "Highland",
+    "West Side Community Organization": "West Side",
+    "Summit Hill Association": "Summit Hill",
+    "Summit-University": "Summit/University",
+    "Thomas-Dale/Frogtown": "Thomas/Dale(Frogtown)",
+    "West 7th Federation/Fort Road": "West Seventh",
+    "CapitolRiver Council": "Capitol River",
+    "Payne-Phalen": "Payne/Phalen",
+    "The Greater East Side": "Greater East Side",
+    "Dayton's Bluff": "Dayton's Bluff",
+    "Eastview-Conway-Battle Creek-Highwood Hills": "Conway/Battlecreek/Highwood",
+    "Union Park": "Union Park"
+}
 const locationText = reactive({
     value: "",
     isSearching: false
 });
-
+let neighborhoodBB = {};
 // Vue callback for once <template> HTML has been added to web page
 onMounted(() => {
     // Create Leaflet map (set bounds and valied zoom levels)
@@ -61,8 +83,16 @@ onMounted(() => {
             return response.json();
         })
         .then((result) => {
-            result.features.forEach((value) => {
+            result.features.forEach((value, index) => {
                 district_boundary.addData(value);
+                neighborhoodBB[neighborhood_mapping[value.properties.name2]] = {
+                    name: value.properties.name2,
+                    bounds: L.latLngBounds(value.geometry.coordinates[0][0].map((coord) => [coord[1], coord[0]]))
+                };
+                let marker = L.marker([map.neighborhood_markers[index].location[0], map.neighborhood_markers[index].location[1]])
+                    .bindPopup((layer) => `${map.neighborhood_markers[index].marker} crimes`)
+                    .addTo(toRaw(map.leaflet));
+                map.neighborhood_markers[index].marker = 0;
             });
         })
         .catch((error) => {
@@ -71,17 +101,90 @@ onMounted(() => {
 
     // Configure location text box
     map.leaflet.addEventListener("moveend", updateLocTextWithMap);
-    map.leaflet.addEventListener("zoomend", updateLocTextWithMap);
+    //map.leaflet.addEventListener("zoomend", updateLocTextWithMap);
+
+    map.leaflet.addEventListener("moveend", updateCrimes);
+    //map.leaflet.addEventListener("zoomend", updateCrimes);
 });
 
 
 // FUNCTIONS
 // Function called once user has entered REST API URL
-function initializeCrimes() {
-    fetch(crime_url.value + "/incidents").then((response) => {
+let lastUpdate = 0;
+async function updateCrimes() {
+    crime_loading.value = true;
+    let active_neighborhoods = [];
+    let map_bounds = map.leaflet.getBounds();
+    for(let neighborhood of neighborhoods.value) {
+        let bounds = neighborhoodBB[neighborhood.name].bounds;
+        //console.log(map_bounds, bounds);
+        if(map_bounds.intersects(bounds)) {
+            active_neighborhoods.push(neighborhood.id);
+        }
+    }
+
+    let filters = new URLSearchParams();
+    if (active_neighborhoods.length > 0) {
+        filters.append("neighborhood", active_neighborhoods.join(","));
+    }
+    let url = crime_url.value + "/incidents?" + filters.toString();
+    let thisUpdate = ++lastUpdate;
+    let data = await fetch(url);
+    let crimes = await data.json();
+    
+    if(thisUpdate !== lastUpdate) {
+        // A newer update has been requested, discard this one
+        return;
+    }
+    crimes_list.value = crimes;
+    for (let marker of map.neighborhood_markers) {
+        marker.marker = 0;
+    }
+    for(let crime of crimes) {
+        map.neighborhood_markers[crime.neighborhood_number - 1].marker += 1;
+    }
+    crime_loading.value = false;
+}
+let specificMarker = null;
+async function showMarker(crime) {
+    if(specificMarker !== null) {
+        map.leaflet.removeLayer(specificMarker);
+        specificMarker = null;
+    }
+    let parts = crime.block.split(" ");
+    parts[0] = parts[0].replaceAll("X", "0");
+    let address = parts.join(" ") + ", St Paul, Minnesota";
+    console.log(address);
+    crime_loading.value = true;
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${address}&format=json`);
+    const json = await res.json();
+    if(json.length === 0) {
+        return;
+    }
+    specificMarker = L.marker([json[0].lat, json[0].lon])
+        .bindPopup(
+            `
+            <b>Date:</b> ${crime.date}<br />
+            <b>Time:</b> ${crime.time}<br />
+            <b>Incident:</b> ${crime.incident}<br />
+            `
+        )
+        .addTo(toRaw(map.leaflet))
+        .openPopup();
+    map.leaflet.setView([json[0].lat, json[0].lon], 16);
+    window.scrollTo(0, 0);
+    crime_loading.value = false;
+}
+
+let neighborhoods = ref([]);
+
+function initNeighborhoods() {
+    fetch(crime_url.value + "/neighborhoods").then((response) => {
         return response.json();
     }).then((result) => {
-        console.log(result);
+        result.forEach((neighborhood) => {
+            neighborhoods.value.push(neighborhood);
+        });
     }).catch((error) => {
         console.log('Error:', error);
     });
@@ -94,7 +197,8 @@ function closeDialog() {
     if (crime_url.value !== '' && url_input.checkValidity()) {
         dialog_err.value = false;
         dialog.close();
-        initializeCrimes();
+        updateCrimes();
+        initNeighborhoods();
     }
     else {
         dialog_err.value = true;
@@ -146,6 +250,24 @@ async function updateLocTextWithMap() {
     locationText.isSearching = false;
 }
 
+function deleteCrime(crime) {
+    fetch(crime_url.value + "/remove-incident", {
+        method: "DELETE",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ case_number: crime.case_number })
+    }).then((response) => {
+        if (response.ok) {
+            updateCrimes();
+        } else {
+            console.error("Failed to delete crime");
+        }
+    }).catch((error) => {
+        console.error("Error:", error);
+    });
+}
+
 /**
  * @param {number} value
  * @param {number} range1
@@ -188,6 +310,36 @@ function almostEqual(value1, value2) {
             <button class="button" type="button" :disabled="locationText.isSearching" @click="updateMapWithLocText">Go</button>
         </div>
         <div id="leafletmap"></div>
+        <div id="crimes-list">
+            <h2>Crimes List</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Case Number</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Incident</th>
+                        <th>Police Grid</th>
+                        <th>Neighborhood</th>
+                        <th>Incident Type</th>
+                        <th>Block</th>
+                    </tr>
+                </thead>
+                <tbody :class="{ 'crime-loading': crime_loading }">
+                    <tr class="crime-row" v-for="crime in crimes_list" :key="crime.case_number" @click="showMarker(crime)">
+                        <td>{{ crime.case_number }}</td>
+                        <td>{{ crime.date }}</td>
+                        <td>{{ crime.time}}</td>
+                        <td>{{ crime.incident }}</td>
+                        <td>{{ crime.police_grid }}</td>
+                        <td>{{ crime.neighborhood_name }}</td>
+                        <td>{{ crime.incident_type }}</td>
+                        <td>{{ crime.block }}</td>
+                        <td><button @click="deleteCrime(crime)">Delete</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </template>
 
@@ -244,5 +396,18 @@ input {
 
 button {
     margin: 0;
+}
+
+.crime-row {
+    cursor: pointer;
+}
+.crime-row button {
+    background-color: orange;
+    border-radius: 5px;
+    padding: 5px;
+    cursor: pointer;
+}
+.crime-loading {
+    filter: blur(2px);
 }
 </style>
