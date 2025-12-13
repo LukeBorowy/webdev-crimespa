@@ -11,18 +11,18 @@ let start_date = ref('');
 let end_date = ref('');
 let max_incidents = ref(1000);
 let possible_incidents = ref([
-    {name: "Murder/Homicide", codes: [100, 110, 120]},
-    {name: "Rape", codes: [210, 220]},
-    {name: "Robbery", codes: [300, 311, 312, 313, 314, 321, 322, 323, 324, 331, 332, 333, 334, 341, 342, 343, 344, 351, 352, 353, 354, 361, 362, 363, 364, 371, 372, 373, 374]},
-    {name: "Aggravated Assault", codes: [400, 410, 411, 412, 420, 421, 422, 430, 431, 432, 440, 441, 442, 450, 451, 452, 453]},
-    {name: "Burglary", codes: [500, 510, 511, 513, 515, 516, 520, 521, 523, 525, 526, 530, 531, 533, 535, 536, 540, 541, 543, 545, 546, 550, 551, 553, 555, 556, 560, 561, 563, 565, 566]},
-    {name: "Theft", codes: [600, 601, 603, 611, 612, 613, 621, 622, 623, 630, 631, 632, 633, 640, 641, 642, 643, 651, 652, 653, 661, 662, 663, 671, 672, 673, 681, 682, 683, 691, 692, 693]},
-    {name: "Motor Vehicle Theft", codes: [700, 710, 711, 712, 720, 721, 722, 730, 731, 732]},
-    {name: "Assault, Domestic", codes: [810, 861, 862, 863]},
-    {name: "Arson", codes: [900, 901, 903, 905, 911, 913, 915, 921, 922, 923, 925, 931, 933, 941, 942, 951, 961, 971, 972, 975, 981, 982]},
-    {name: "Criminal Damage to Property", codes: [1400, 1401, 1410, 1415, 1416, 1420, 1425, 1426, 1430, 1435, 1436]},
-    {name: "Narcotics", codes: [1800, 1810, 1811, 1812, 1813, 1814, 1815, 1820, 1822, 1823, 1824, 1825, 1830, 1835, 1840, 1841, 1842, 1843, 1844, 1845, 1850, 1855, 1860, 1865, 1870, 1880, 1885]},
-    {name: "Other", codes: [614, 2619, 3100, 9954, 9959, 9986]}
+    { name: "Murder/Homicide", codes: [100, 110, 120] },
+    { name: "Rape", codes: [210, 220] },
+    { name: "Robbery", codes: [300, 311, 312, 313, 314, 321, 322, 323, 324, 331, 332, 333, 334, 341, 342, 343, 344, 351, 352, 353, 354, 361, 362, 363, 364, 371, 372, 373, 374] },
+    { name: "Aggravated Assault", codes: [400, 410, 411, 412, 420, 421, 422, 430, 431, 432, 440, 441, 442, 450, 451, 452, 453] },
+    { name: "Burglary", codes: [500, 510, 511, 513, 515, 516, 520, 521, 523, 525, 526, 530, 531, 533, 535, 536, 540, 541, 543, 545, 546, 550, 551, 553, 555, 556, 560, 561, 563, 565, 566] },
+    { name: "Theft", codes: [600, 601, 603, 611, 612, 613, 621, 622, 623, 630, 631, 632, 633, 640, 641, 642, 643, 651, 652, 653, 661, 662, 663, 671, 672, 673, 681, 682, 683, 691, 692, 693] },
+    { name: "Motor Vehicle Theft", codes: [700, 710, 711, 712, 720, 721, 722, 730, 731, 732] },
+    { name: "Assault, Domestic", codes: [810, 861, 862, 863] },
+    { name: "Arson", codes: [900, 901, 903, 905, 911, 913, 915, 921, 922, 923, 925, 931, 933, 941, 942, 951, 961, 971, 972, 975, 981, 982] },
+    { name: "Criminal Damage to Property", codes: [1400, 1401, 1410, 1415, 1416, 1420, 1425, 1426, 1430, 1435, 1436] },
+    { name: "Narcotics", codes: [1800, 1810, 1811, 1812, 1813, 1814, 1815, 1820, 1822, 1823, 1824, 1825, 1830, 1835, 1840, 1841, 1842, 1843, 1844, 1845, 1850, 1855, 1860, 1865, 1870, 1880, 1885] },
+    { name: "Other", codes: [614, 2619, 3100, 9954, 9959, 9986] }
 ]);
 let map = reactive(
     {
@@ -158,10 +158,10 @@ async function updateCrimes() {
     crime_loading.value = true;
     let active_neighborhoods = [];
     let map_bounds = map.leaflet.getBounds();
-    for(let neighborhood of neighborhoods.value) {
+    for (let neighborhood of neighborhoods.value) {
         let bounds = neighborhoodBB[neighborhood.name].bounds;
         //console.log(map_bounds, bounds);
-        if(map_bounds.intersects(bounds)) {
+        if (map_bounds.intersects(bounds)) {
             active_neighborhoods.push(neighborhood.id);
         }
     }
@@ -171,25 +171,25 @@ async function updateCrimes() {
         console.log(neighborhood_checkboxes.value);
         filters.append("neighborhood", neighborhood_checkboxes.value.join(","));
     } else {
-        if(active_neighborhoods.length != 0) {
+        if (active_neighborhoods.length != 0) {
             filters.append("neighborhood", active_neighborhoods.join(","));
         }
     }
-    if(incident_checkboxes.value.length > 0) {
+    if (incident_checkboxes.value.length > 0) {
         console.log(incident_checkboxes.value);
         let codes = [];
-        for(let incident_name of incident_checkboxes.value) {
+        for (let incident_name of incident_checkboxes.value) {
             let incident = possible_incidents.value.find(i => i.name === incident_name);
-            if(incident) {
+            if (incident) {
                 codes = codes.concat(incident.codes);
             }
         }
         filters.append("code", codes.join(","));
     }
-    if(start_date.value !== '') {
+    if (start_date.value !== '') {
         filters.append("start_date", start_date.value);
     }
-    if(end_date.value !== '') {
+    if (end_date.value !== '') {
         filters.append("end_date", end_date.value);
     }
     filters.append("limit", max_incidents.value);
@@ -197,15 +197,15 @@ async function updateCrimes() {
     let thisUpdate = ++lastUpdate;
     let data = await fetch(url);
     let crimes = await data.json();
-    
-    if(thisUpdate !== lastUpdate) {
+
+    if (thisUpdate !== lastUpdate) {
         // A newer update has been requested, discard this one
         return;
     }
     for (let marker of map.neighborhood_markers) {
         marker.marker = 0;
     }
-    for(let crime of crimes) {
+    for (let crime of crimes) {
         map.neighborhood_markers[crime.neighborhood_number - 1].marker += 1;
         // violent, property, other.
         const type = crime.code;
@@ -216,16 +216,16 @@ async function updateCrimes() {
         crime.is_violent = false;
         crime.is_property = false;
         crime.is_other = true;
-        for(let range of types.violent) {
-            if(type >= range[0] && type <= range[1]) {
+        for (let range of types.violent) {
+            if (type >= range[0] && type <= range[1]) {
                 crime.is_violent = true;
                 crime.is_property = false;
                 crime.is_other = false;
                 break;
             }
         }
-        for(let range of types.property) {
-            if(type >= range[0] && type <= range[1]) {
+        for (let range of types.property) {
+            if (type >= range[0] && type <= range[1]) {
                 crime.is_property = true;
                 crime.is_violent = false;
                 crime.is_other = false;
@@ -239,7 +239,7 @@ async function updateCrimes() {
 }
 let specificMarker = null;
 async function showMarker(crime) {
-    if(specificMarker !== null) {
+    if (specificMarker !== null) {
         map.leaflet.removeLayer(specificMarker);
         specificMarker = null;
     }
@@ -251,7 +251,7 @@ async function showMarker(crime) {
     try {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${address}&format=json`);
         const json = await res.json();
-        if(json.length === 0) {
+        if (json.length === 0) {
             crime_loading.value = false;
             alert("Could not find location for this crime.");
             return;
@@ -382,7 +382,7 @@ function submitNewIncForm(ev) {
 }
 
 function deleteCrime(case_number) {
-    if(specificMarker !== null) {
+    if (specificMarker !== null) {
         map.leaflet.removeLayer(specificMarker);
         specificMarker = null;
     }
@@ -402,7 +402,7 @@ function deleteCrime(case_number) {
         console.error("Error:", error);
     });
 }
-window.globalDeleteCrime = function(case_number) {
+window.globalDeleteCrime = function (case_number) {
     deleteCrime(case_number);
 }
 
@@ -548,10 +548,10 @@ function almostEqual(value1, value2) {
                     </tr>
                 </thead>
                 <tbody :class="{ 'crime-loading': crime_loading }">
-                    <tr class="crime-row" :class="{violent: crime.is_violent, property:crime.is_property, other: crime.is_other}" v-for="crime in crimes_list" :key="crime.case_number" @click="showMarker(crime)">
+                    <tr class="crime-row" :class="{ violent: crime.is_violent, property: crime.is_property, other: crime.is_other }" v-for="crime in crimes_list" :key="crime.case_number" @click="showMarker(crime)">
                         <td>{{ crime.case_number }}</td>
                         <td>{{ crime.date }}</td>
-                        <td>{{ crime.time}}</td>
+                        <td>{{ crime.time }}</td>
                         <td>{{ crime.incident }}</td>
                         <td>{{ crime.police_grid }}</td>
                         <td>{{ crime.neighborhood_name }}</td>
@@ -669,19 +669,24 @@ button {
 .crime-loading {
     filter: blur(2px);
 }
+
 .violent {
     background-color: #ff9999;
 }
+
 .property {
     background-color: #ffff99;
 }
+
 .other {
     background-color: #99ccff;
 }
+
 .legend {
     margin: 5px;
     padding: 5px;
 }
+
 .search-button {
     background-color: #7694f8;
     border-radius: 5px;
@@ -690,7 +695,8 @@ button {
 }
 </style>
 <style>
-    .crime-row button, .pop-delete {
+.crime-row button,
+.pop-delete {
     background-color: orange;
     border-radius: 5px;
     padding: 5px;
