@@ -5,6 +5,25 @@ let crime_url = ref('http://localhost:8000');
 let dialog_err = ref(false);
 let crime_loading = ref(false);
 let crimes_list = ref([]);
+let incident_checkboxes = ref([]);
+let neighborhood_checkboxes = ref([]);
+let start_date = ref('');
+let end_date = ref('');
+let max_incidents = ref(1000);
+let possible_incidents = ref([
+    {name: "Murder/Homicide", codes: [100, 110, 120]},
+    {name: "Rape", codes: [210, 220]},
+    {name: "Robbery", codes: [300, 311, 312, 313, 314, 321, 322, 323, 324, 331, 332, 333, 334, 341, 342, 343, 344, 351, 352, 353, 354, 361, 362, 363, 364, 371, 372, 373, 374]},
+    {name: "Aggravated Assault", codes: [400, 410, 411, 412, 420, 421, 422, 430, 431, 432, 440, 441, 442, 450, 451, 452, 453]},
+    {name: "Burglary", codes: [500, 510, 511, 513, 515, 516, 520, 521, 523, 525, 526, 530, 531, 533, 535, 536, 540, 541, 543, 545, 546, 550, 551, 553, 555, 556, 560, 561, 563, 565, 566]},
+    {name: "Theft", codes: [600, 601, 603, 611, 612, 613, 621, 622, 623, 630, 631, 632, 633, 640, 641, 642, 643, 651, 652, 653, 661, 662, 663, 671, 672, 673, 681, 682, 683, 691, 692, 693]},
+    {name: "Motor Vehicle Theft", codes: [700, 710, 711, 712, 720, 721, 722, 730, 731, 732]},
+    {name: "Assault, Domestic", codes: [810, 861, 862, 863]},
+    {name: "Arson", codes: [900, 901, 903, 905, 911, 913, 915, 921, 922, 923, 925, 931, 933, 941, 942, 951, 961, 971, 972, 975, 981, 982]},
+    {name: "Criminal Damage to Property", codes: [1400, 1401, 1410, 1415, 1416, 1420, 1425, 1426, 1430, 1435, 1436]},
+    {name: "Narcotics", codes: [1800, 1810, 1811, 1812, 1813, 1814, 1815, 1820, 1822, 1823, 1824, 1825, 1830, 1835, 1840, 1841, 1842, 1843, 1844, 1845, 1850, 1855, 1860, 1865, 1870, 1880, 1885]},
+    {name: "Other", codes: [614, 2619, 3100, 9954, 9959, 9986]}
+]);
 let map = reactive(
     {
         leaflet: null,
@@ -124,9 +143,32 @@ async function updateCrimes() {
     }
 
     let filters = new URLSearchParams();
-    if (active_neighborhoods.length > 0) {
-        filters.append("neighborhood", active_neighborhoods.join(","));
+    if (neighborhood_checkboxes.value.length > 0) {
+        console.log(neighborhood_checkboxes.value);
+        filters.append("neighborhood", neighborhood_checkboxes.value.join(","));
+    } else {
+        if(active_neighborhoods.length != 0) {
+            filters.append("neighborhood", active_neighborhoods.join(","));
+        }
     }
+    if(incident_checkboxes.value.length > 0) {
+        console.log(incident_checkboxes.value);
+        let codes = [];
+        for(let incident_name of incident_checkboxes.value) {
+            let incident = possible_incidents.value.find(i => i.name === incident_name);
+            if(incident) {
+                codes = codes.concat(incident.codes);
+            }
+        }
+        filters.append("code", codes.join(","));
+    }
+    if(start_date.value !== '') {
+        filters.append("start_date", start_date.value);
+    }
+    if(end_date.value !== '') {
+        filters.append("end_date", end_date.value);
+    }
+    filters.append("limit", max_incidents.value);
     let url = crime_url.value + "/incidents?" + filters.toString();
     let thisUpdate = ++lastUpdate;
     let data = await fetch(url);
@@ -136,14 +178,40 @@ async function updateCrimes() {
         // A newer update has been requested, discard this one
         return;
     }
-    crimes_list.value = crimes;
     for (let marker of map.neighborhood_markers) {
         marker.marker = 0;
     }
     for(let crime of crimes) {
         map.neighborhood_markers[crime.neighborhood_number - 1].marker += 1;
+        // violent, property, other.
+        const type = crime.code;
+        const types = {
+            violent: [[100, 453], [810, 863], [3100, 3100]],
+            property: [[500, 613], [621, 732], [900, 1436]]
+        }
+        crime.is_violent = false;
+        crime.is_property = false;
+        crime.is_other = true;
+        for(let range of types.violent) {
+            if(type >= range[0] && type <= range[1]) {
+                crime.is_violent = true;
+                crime.is_property = false;
+                crime.is_other = false;
+                break;
+            }
+        }
+        for(let range of types.property) {
+            if(type >= range[0] && type <= range[1]) {
+                crime.is_property = true;
+                crime.is_violent = false;
+                crime.is_other = false;
+                break;
+            }
+        }
     }
     crime_loading.value = false;
+    crimes_list.value = crimes;
+
 }
 let specificMarker = null;
 async function showMarker(crime) {
@@ -156,24 +224,30 @@ async function showMarker(crime) {
     let address = parts.join(" ") + ", St Paul, Minnesota";
     console.log(address);
     crime_loading.value = true;
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${address}&format=json`);
-    const json = await res.json();
-    if(json.length === 0) {
-        return;
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${address}&format=json`);
+        const json = await res.json();
+        if(json.length === 0) {
+            crime_loading.value = false;
+            alert("Could not find location for this crime.");
+            return;
+        }
+        specificMarker = L.marker([json[0].lat, json[0].lon])
+            .bindPopup(
+                `
+                <b>Date:</b> ${crime.date}<br />
+                <b>Time:</b> ${crime.time}<br />
+                <b>Incident:</b> ${crime.incident}<br />
+                <button class="pop-delete" onclick="globalDeleteCrime('${crime.case_number}')">Delete</button>
+                `
+            )
+            .addTo(toRaw(map.leaflet))
+            .openPopup();
+        map.leaflet.setView([json[0].lat, json[0].lon], 16);
+        window.scrollTo(0, 0);
+    } finally {
+        crime_loading.value = false;
     }
-    specificMarker = L.marker([json[0].lat, json[0].lon])
-        .bindPopup(
-            `
-            <b>Date:</b> ${crime.date}<br />
-            <b>Time:</b> ${crime.time}<br />
-            <b>Incident:</b> ${crime.incident}<br />
-            `
-        )
-        .addTo(toRaw(map.leaflet))
-        .openPopup();
-    map.leaflet.setView([json[0].lat, json[0].lon], 16);
-    window.scrollTo(0, 0);
-    crime_loading.value = false;
 }
 
 let neighborhoods = ref([]);
@@ -250,13 +324,17 @@ async function updateLocTextWithMap() {
     locationText.isSearching = false;
 }
 
-function deleteCrime(crime) {
+function deleteCrime(case_number) {
+    if(specificMarker !== null) {
+        map.leaflet.removeLayer(specificMarker);
+        specificMarker = null;
+    }
     fetch(crime_url.value + "/remove-incident", {
         method: "DELETE",
         headers: {
             "Content-Type": "application/json"
         },
-        body: JSON.stringify({ case_number: crime.case_number })
+        body: JSON.stringify({ case_number: case_number })
     }).then((response) => {
         if (response.ok) {
             updateCrimes();
@@ -266,6 +344,9 @@ function deleteCrime(crime) {
     }).catch((error) => {
         console.error("Error:", error);
     });
+}
+window.globalDeleteCrime = function(case_number) {
+    deleteCrime(case_number);
 }
 
 /**
@@ -312,6 +393,44 @@ function almostEqual(value1, value2) {
         <div id="leafletmap"></div>
         <div id="crimes-list">
             <h2>Crimes List</h2>
+            <span>Click on a row to jump to its location on the map. It may take a while to go there due to the location API call.</span>
+            <br>
+            <span class="violent legend">Violent</span>
+            <span class="property legend">Property</span>
+            <span class="other legend">Other</span>
+            <div>
+                <h3>Filters</h3>
+                <div class="grid-x">
+                    <div class="cell small-3">
+                        <h5>Incident Types</h5>
+                        <div v-for="possible_incident in possible_incidents">
+                            <input type="checkbox" :id="possible_incident.name" :value="possible_incident.name" v-model="incident_checkboxes">
+                            <label :for="possible_incident.name">{{ possible_incident.name }}</label>
+                        </div>
+                    </div>
+                    <div class="cell small-3">
+                        <h5>Neighborhoods </h5>
+                        (if none selected, will use what is visible on map)
+                        <div v-for="neighborhood in neighborhoods">
+                            <input type="checkbox" :id="neighborhood.name" :value="neighborhood.id" v-model="neighborhood_checkboxes">
+                            <label :for="neighborhood.name">{{ neighborhood.name }}</label>
+                        </div>
+                    </div>
+                    <div class="cell small-3">
+                        <h5>Date Range</h5>
+                        <label for="start-date">Start Date:</label>
+                        <input type="date" id="start-date" v-model="start_date" />
+                        <br />
+                        <label for="end-date">End Date:</label>
+                        <input type="date" id="end-date" v-model="end_date" />
+                    </div>
+                    <div class="cell small-3">
+                        <h5>Max incidents</h5>
+                        <input type="number" v-model="max_incidents" min="1" />
+                    </div>
+                </div>
+                <button @click="updateCrimes" class="search-button">Search Crimes</button>
+            </div>
             <table>
                 <thead>
                     <tr>
@@ -326,7 +445,7 @@ function almostEqual(value1, value2) {
                     </tr>
                 </thead>
                 <tbody :class="{ 'crime-loading': crime_loading }">
-                    <tr class="crime-row" v-for="crime in crimes_list" :key="crime.case_number" @click="showMarker(crime)">
+                    <tr class="crime-row" :class="{violent: crime.is_violent, property:crime.is_property, other: crime.is_other}" v-for="crime in crimes_list" :key="crime.case_number" @click="showMarker(crime)">
                         <td>{{ crime.case_number }}</td>
                         <td>{{ crime.date }}</td>
                         <td>{{ crime.time}}</td>
@@ -335,7 +454,7 @@ function almostEqual(value1, value2) {
                         <td>{{ crime.neighborhood_name }}</td>
                         <td>{{ crime.incident_type }}</td>
                         <td>{{ crime.block }}</td>
-                        <td><button @click="deleteCrime(crime)">Delete</button></td>
+                        <td><button @click="deleteCrime(crime.case_number)">Delete</button></td>
                     </tr>
                 </tbody>
             </table>
@@ -401,13 +520,35 @@ button {
 .crime-row {
     cursor: pointer;
 }
-.crime-row button {
-    background-color: orange;
+
+.crime-loading {
+    filter: blur(2px);
+}
+.violent {
+    background-color: #ff9999;
+}
+.property {
+    background-color: #ffff99;
+}
+.other {
+    background-color: #99ccff;
+}
+.legend {
+    margin: 5px;
+    padding: 5px;
+}
+.search-button {
+    background-color: #7694f8;
     border-radius: 5px;
     padding: 5px;
     cursor: pointer;
 }
-.crime-loading {
-    filter: blur(2px);
+</style>
+<style>
+    .crime-row button, .pop-delete {
+    background-color: orange;
+    border-radius: 5px;
+    padding: 5px;
+    cursor: pointer;
 }
 </style>
