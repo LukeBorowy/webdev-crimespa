@@ -140,6 +140,7 @@ onMounted(() => {
     });
     map.leaflet.addEventListener("moveend", (ev) => {
         if (map.isUserGesturing) {
+            updateCrimes();
             if (locationText.cancelSearch) {
                 locationText.cancelSearch(true);
                 locationText.cancelSearch = null;
@@ -374,6 +375,8 @@ function submitNewIncForm(ev) {
             newIncForm.neighborhood_number = undefined;
             newIncForm.police_grid = undefined;
             newIncForm.time = "";
+            // Update data
+            updateCrimes();
         }
     }).catch(err => {
         newIncForm.errorMsg = "Something went wrong. Please try again.";
