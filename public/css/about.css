@@ -1,0 +1,29 @@
+.main-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin: 1rem;
+}
+
+.dev-bio-ctn {
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: center;
+    align-items: end;
+    gap: 2rem;
+}
+
+.dev-bio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    flex: 0 1 500px;
+}
+
+h1,
+a,
+span {
+    margin: 0;
+}
