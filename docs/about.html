@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>About the Project</title>
+        <!-- Foundation CSS -->
+        <link rel="stylesheet" href="css/foundation.css" />
+        <!-- Custom Style -->
+        <link rel="stylesheet" href="css/style.css" />
+        <link rel="stylesheet" href="css/about.css" />
+    </head>
+    <body>
+        <!-- Main page -->
+        <div class="main-content">
+            <h1>About the Project</h1>
+            <h2>Meet the Developers</h2>
+            <div class="dev-bio-ctn">
+                <div class="dev-bio">
+                    <img src="media/luke.jpg" alt="Photo of Luke" />
+                    <h3>Luke Borowy</h3>
+                    <p>I'm a senior at the University of St Thomas double majoring in computer science and Spanish. I've done internships at Cambria and Piper Sandler, and I hope to have a career as a software developer once I graduate at the end of this semester.</p>
+                </div>
+                <div class="dev-bio">
+                    <img src="media/lukas.jpg" alt="Photo of Lukas" />
+                    <h3>Lukas Singer</h3>
+                    <p>I'm a senior at the University of St. Thomas majoring in computer science and computer engineering. I've interned at Mayo Clinic and done research on object detection for autonomous vehicles. After graduating, I hope to work in a front-end development position.</p>
+                </div>
+            </div>
+            <h2>Tools Used</h2>
+            <div class="tool-desc-ctn">
+                <div class="tool-desc">
+                    <h3>Foundation</h3>
+                    <p>This is a CSS framework we used to make the website more appealing than plain HTML would. It also helped use make the filter layout responsive.</p>
+                </div>
+                <div class="tool-desc">
+                    <h3>Vue</h3>
+                    <p>This is a popular JS framework used to make reactive web applications. We used it for binding all interactive page elements to ref variables.</p>
+                </div>
+                <div class="tool-desc">
+                    <h3>Leaflet API</h3>
+                    <p>This is a JS library for creating interactive maps. We used it for the crime map at the top of the page.</p>
+                </div>
+                <div class="tool-desc">
+                    <h3>Nominatim API</h3>
+                    <p>This API is used for converting addresses to coordinates and back again. We used it to make the address bar above the map accurately reflect position, and to correctly move to new locations.</p>
+                </div>
+                <div class="tool-desc">
+                    <h3>Express</h3>
+                    <p>This is a Node.js web server framework. We used it primarily to implement the REST API needed for the crime statistics.</p>
+                </div>
+                <div class="tool-desc">
+                    <h3>SQLite3</h3>
+                    <p>This is a simple SQL database system. We used it to store the details on all crimes, neighborhoods, and codes.</p>
+                </div>
+                <div class="tool-desc">
+                    <h3>cors</h3>
+                    <p>This is a simple Node.js library used in conjunction with Express. We used it so that we could make requests from the website at localhost:5173, to the REST server at localhost:8000</p>
+                </div>
+            </div>
+            <h2>Video Demo</h2>
+            <div class="video-ctn">
+                <video controls src="media/demo.webm"></video>
+            </div>
+            <h2>Findings</h2>
+            <div class="findings-ctn">
+                <ul>
+                    <li>There are a lot of "Proactive Police Visits" that take place all over the city.</li>
+                    <li>The police conduct Community Engagement events, presumably to build trust in the police force.</li>
+                    <li>The greatest number of crimes take place in the centermost neighborhood "Capitol River", despite it being one of the smallest ones.</li>
+                    <li>Almost double the number of crimes occur in Union Park compared to Macalester-Groveland (north and south of St. Thomas respectively.)</li>
+                    <li>The neighborhood north of St. Thomas (Union Park) has the 4th most overall crime in the city.</li>
+                    <li>The St. Thomas neighborhoods have some of the lowest homicide rates in the city.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Foundation CSS Framework: include before closing <body> tag -->
+        <script src="js/vendor/jquery.js"></script>
+        <script src="js/vendor/what-input.js"></script>
+        <script src="js/vendor/foundation.js"></script>
+        <script type="application/javascript">
+            $(document).foundation();
+        </script>
+    </body>
+</html>
